@@ -7,19 +7,26 @@ import datetime
 import uuid
 from bson import ObjectId
 from pymongo import DESCENDING
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env file
+load_dotenv()
+
 app = Flask(__name__)
-app.secret_key = "supersecret"
-app.config["MONGO_URI"] = "mongodb://localhost:27017/diabetes_db"
-mongo = PyMongo(app)
+app.secret_key = os.getenv("SECRET_KEY")
+app.config["MONGO_URI"] = os.getenv("MONGO_URI")
 
 # Flask-Mail configuration
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'sahanes568@gmail.com'
-app.config['MAIL_PASSWORD'] = 'kxxmbuauzqjqftam'
+app.config['MAIL_SERVER'] = os.getenv("MAIL_SERVER")
+app.config['MAIL_PORT'] = os.getenv("MAIL_PORT")
+app.config['MAIL_USE_TLS'] = os.getenv("MAIL_USE_TLS")
+app.config['MAIL_USERNAME'] = os.getenv("MAIL_USERNAME")
+app.config['MAIL_PASSWORD'] = os.getenv("MAIL_PASSWORD")
 
 mail = Mail(app)
+
+mongo = PyMongo(app)
 
 # Load scaler and ML model
 scaler = pickle.load(open("Model/standardScalar.pkl", "rb"))
@@ -47,7 +54,7 @@ def register():
             session['user'] = request.form['username']
             
             # Send verification email
-            msg = Message('Email Verification', sender='sahanes568@gmail.com', recipients=[request.form['email']])
+            msg = Message('Email Verification', sender=os.getenv("MAIL_USERNAME"), recipients=[request.form['email']])
             msg.body = f"Please click the link to verify your email: {url_for('verify_email', token=verification_token, _external=True)}"
             mail.send(msg)
             
@@ -139,7 +146,7 @@ def predict():
             # Send the diabetes report to the user
             user_name = session['user']
             email = mongo.db.users.find_one({'username': user_name})['email']
-            msg = Message('Diabetes Report', sender='sahanes568@gmail.com', recipients=[email])
+            msg = Message('Diabetes Report', sender=os.getenv("MAIL_USERNAME"), recipients=[email])
             msg.body = f"Here is your diabetes prediction report:\n\n" \
                        f"Pregnancies: {preg}\n" \
                        f"Glucose: {gluc}\n" \
@@ -152,8 +159,6 @@ def predict():
                        f"Prediction: {'Diabetic' if prediction == 1 else 'Not Diabetic'}\n\n" \
                        f"Thank you for using our service."
             mail.send(msg)
-            
-            
             
             return render_template('prediction.html', prediction=prediction)
         return render_template('predict.html')
